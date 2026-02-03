@@ -1,1 +1,4 @@
 test.ipynb
+test/
+*.pyc
+__pycache__/

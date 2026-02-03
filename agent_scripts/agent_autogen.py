@@ -8,7 +8,7 @@ import decimal
 from typing import Any, List, Union
 import asyncio
 import traceback
-import allfuncscode
+import statool
 import json
 from autogen_core.tools import FunctionTool
 from autogen_agentchat.agents import AssistantAgent
@@ -16,9 +16,9 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.tools.code_execution import PythonCodeExecutionTool
 from tqdm import tqdm
+from utils import get_mcp_prompt,get_model_cfg
 
 def _clean_result(obj):
-    """递归清洗返回值，保证 JSON 可序列化"""
     if obj is None:
         return None
     if isinstance(obj, np.generic):
@@ -44,10 +44,8 @@ def _clean_result(obj):
     return obj
 
 def make_function_tool(func):
-    # 获取原函数签名
     sig = inspect.signature(func)
     
-    # 创建 wrapper
     @functools.wraps(func)
     def wrapper(**kwargs):
         result = func(**kwargs)
@@ -77,52 +75,28 @@ def make_tools_from_module(module):
         tools.append(make_function_tool(func))
     return tools
 
-mcp_prompt = """
-Your task is to answer the following question. Please follow the instructions carefully:
-
-## Question
-
-{questions}
-
-## Instructions
-1. Analyze the question and determine whether you can answer.
-2. There are lots of useful tools available, and you can use them to answer the user's questions.(Please use the tools when necessary.)
-3. If the question is choice or judgment, you should satisfy the required answer format and don't provide explanations.
-4. For other questions, you should provide a concise and complete answer.
-5. Finally, the output **must always** follow this format **(do not omit <>):**
-    The answer is <your answer>.
+sys="""
+You are a precise and careful Statistics Analyst. And you can use the tools provided to help you answer questions.
 """
 
-def get_mcp_prompt(row):
-    if row["code"] == 0:
-        return mcp_prompt.format(questions=row["question"])
-    else:
-        ques = row["question"]
-        if row["dataset"] != 0:
-            dataset = str(row["dataset"])
-            if not dataset.endswith(".csv"):
-                dataset += ".csv"
-            dataset_path = f"./datasets83/{dataset}"
-            ques += f" The relevant dataset is located at: \"{dataset_path}\"\n"
-        return mcp_prompt.format(questions=ques)
-
 if __name__ == "__main__":
-    # model = "qwen72"
-    # models = ["qwen32", "qwen72"]
-    # models = ["qwen7"]
-    # models = ["qwen7","qwen32","qwen72"]
-    # models = ["deepseek"]
     models = ["qwen7","qwen32","qwen72","gpt-4o-mini","deepseek"]
+    model_map = {"deepseek":"deepseek3"}
+    retry_col = ["a57","a224","a237"]
+    input_path = "./autogen.json"
+    output_path = f"./autogen.json"
+    begin_index =0
+    tools = make_tools_from_module(statool)
+    
     for model in models:
-        with open("keys.json", "r") as f:
-            config = json.load(f)
-            
-        if model not in config:
-            raise ValueError(f"Unknown provider: {model}")
         
-        model_map = {"deepseek":"deepseek3"}
-        cfg = config[model_map[model]] if model in model_map else config[model]
+        data = pd.read_json(input_path, encoding='utf-8')
+        data_tmp = data.copy()
+        col = f"autogen_{model}"
+        if col not in data_tmp.columns:
+            data_tmp[col] = None
 
+        cfg = get_model_cfg(model, model_map)
         model_info = {
             "name": cfg["model"],
             "family": "qwen" if "qwen" in cfg["model"].lower() else "openai",
@@ -132,33 +106,9 @@ if __name__ == "__main__":
             "function_calling": True
         }
 
-        # 创建工具
-        tools = make_tools_from_module(allfuncscode)
-        # code_tool = PythonCodeExecutionTool(LocalCommandLineCodeExecutor(work_dir="coding"))
-
-        sys="""
-You are a precise and careful Statistics Analyst. And you can use the tools provided to help you answer questions.
-"""
-
-        data1 = pd.read_json("./agents_allq/autogen.json", encoding='utf-8')
-        data = data1.copy()
-        data_tmp = data.copy()
-        col = f"autogen_{model}"
-        if col not in data_tmp.columns:
-            data_tmp[col] = None
-
-        null_mask = data_tmp[col].isna()
-        if null_mask.any():
-            begin_index = null_mask.idxmax()
-            print(f"[Info] Resume from index {begin_index}")
-        else:
-            print("[Info] All rows already finished.")
-            begin_index = len(data_tmp)
-        needs = ["a57","a224","a237"]
-        begin_index =0
         for index, row in tqdm(data.iterrows(), total=len(data)):
-            # if index < begin_index or ("[Error] Row" not in str(data.loc[index,col])):
-            if index < begin_index or row["index"] not in needs:
+            if index < begin_index:
+            # if index < begin_index or row["index"] not in retry_col:
                 continue
             print("-"*20+f"agent{model},row{index}"+"-"*20)
 
@@ -197,11 +147,9 @@ You are a precise and careful Statistics Analyst. And you can use the tools prov
                 message = f"[Error] Row {index} failed:\n{traceback.format_exc()}"
                 data_tmp.loc[index, f"autogen_{model}"] = message
 
-            # 每10条保存一次
             if (index + 1) % 10 == 0:
-                data_tmp.to_json("./agents_allq/autogen.json", force_ascii=False, orient='records', indent=2)
+                data_tmp.to_json(output_path, force_ascii=False, orient='records', indent=2)
                 print(f"[Info] Saved progress at index {index + 1}")
 
-        # 保存最终结果
-        data_tmp.to_json("./agents_allq/autogen.json", force_ascii=False, orient='records', indent=2)
+        data_tmp.to_json(output_path, force_ascii=False, orient='records', indent=2)
         print("[Info] Finished processing all rows and saved final result.")

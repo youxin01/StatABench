@@ -11,53 +11,6 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Tool
 import pandas as pd
 from tqdm import tqdm
 
-# # 1. First, set the event loop policy (must be done before any async operations)
-# if sys.platform == "win32":
-#     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
-agent_map = {
-    "qwen72": "qwen2.5-72b-instruct",
-    "qwen32": "qwen2.5-32b-instruct",
-    "qwen8": "qwen3-8b",
-    "gpt4omini": "gpt-4o-mini",
-    "deepseek": "deepseek-v3",
-    "llama3.1-8b": "llama3.1-8b",
-    "llama3.1-70b": "llama3.1-70b"
-}
-
-agent_name = "qwen8"
-# model = ChatOpenAI(
-#     model=agent_map[agent_name],
-#     temperature=0,
-#     max_tokens=None,
-#     timeout=None,
-#     api_key=,
-#     base_url="https://api.ai-gaochao.cn/v1",
-# )
-
-model = ChatOpenAI(
-    model="qwen3-8b",
-    temperature=0,
-    max_tokens=None,
-    timeout=None,
-    api_key=,
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-    extra_body={
-        "enable_thinking": False,
-        "return_reasoning": False
-    }
-)
-
-# agent_name = "llama3.1-8b"
-# model = ChatOpenAI(
-#     model=agent_map[agent_name],
-#     temperature=0,
-#     max_tokens=None,
-#     timeout=None,
-#     api_key="sk-XH5DQOWH964IdSnW4723Ef86D3844d37AeFfAeA569Cd9fAd",
-#     base_url="http://localhost:54754/v1"
-# )
-
 current_dir = os.path.dirname(os.path.abspath(__file__))
 math_server_path = os.path.join(current_dir, "mcp_server.py")
 
@@ -107,17 +60,9 @@ def get_mcp_prompt(row):
         eval_prompt = mcp_prompt.format(questions=ques)
     return eval_prompt
 
-
-datas = pd.read_json(
-    f"./zz2_limit12/final_mcp_res_{agent_name}.json",
-    encoding="utf-8"
-)
-
-data_tmp = datas.copy()
-# output_file = f"./all_conversations_{agent_name}.txt"
-output_file2 = f"./zz2_limit12/final_mcp_res_{agent_name}.json"
-
-async def main():
+async def main(input_file=None, output_file2=None, model=None, agent_name="qwen72"):
+    datas = pd.read_json(input_file,encoding="utf-8")
+    data_tmp = datas.copy()
     try:
         print("Connecting to server...")
         async with stdio_client(server_params) as (read, write):
@@ -244,4 +189,29 @@ async def main():
 # 5. Ensure the main entry point is correct
 if __name__ == "__main__":
     print("Starting main program...")
-    asyncio.run(main())
+
+    agent_map = {
+    "qwen72": "qwen2.5-72b-instruct",
+    "qwen32": "qwen2.5-32b-instruct",
+    "qwen8": "qwen3-8b",
+    "gpt4omini": "gpt-4o-mini",
+    "deepseek": "deepseek-v3",
+    "llama3.1-8b": "llama3.1-8b",
+    "llama3.1-70b": "llama3.1-70b"
+    }
+    agent_name = "deepseek"
+    model = ChatOpenAI(
+        model=agent_map[agent_name],
+        temperature=0,
+        max_tokens=None,
+        timeout=None,
+        api_key="",
+        base_url="",
+        extra_body={
+            "enable_thinking": False,
+            "return_reasoning": False
+        }
+    )
+    input_file = ""
+    output_file = f""
+    asyncio.run(main(input_file=input_file, output_file2=output_file, model=model, agent_name=agent_name))

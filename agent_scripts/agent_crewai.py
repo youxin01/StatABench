@@ -2,17 +2,16 @@ import os
 import pandas as pd
 import inspect
 from typing import Any
-import allfuncscode
+import statool
 from crewai import Crew, Task, Agent, LLM, Process
 from crewai_tools import FileReadTool, CodeInterpreterTool
 from crewai.tools import tool
 import traceback
 import json
 from tqdm import tqdm
-
+from utils import get_mcp_prompt, get_model_cfg
 
 def auto_wrap_tools(module):
-
     wrapped_tools = []
     for name, func in inspect.getmembers(module, inspect.isfunction):
         if name.startswith("_") or inspect.getmodule(func) != module:
@@ -38,103 +37,69 @@ def wrapper({params_str}):
         wrapped_tools.append(local_ns["wrapper"])
     return wrapped_tools
 
-mcp_prompt = """
-Your task is to answer the following question. Please follow the instructions carefully:
-
-## Question
-
-{questions}
-
-## Instructions
-1. Analyze the question and determine whether you can answer.
-2. If the question is choice or judgment, you should satisfy the required answer format and don't provide explanations.
-3. For other questions, you should provide a concise and complete answer.
-4. Finally, the output **must always** follow this format **(do not omit <>):**
-    The answer is <your answer>.
-"""
-
-def get_mcp_prompt(row):
-    if row["code"] == 0:
-        return mcp_prompt.format(questions=row["question"])
-    else:
-        ques = row["question"]
-        if row["dataset"] != 0:
-            dataset = str(row["dataset"])
-            if not dataset.endswith(".csv"):
-                dataset += ".csv"
-            dataset_path = os.path.join("./datasets83", dataset)
-            ques += f' The relevant dataset is located at: "{dataset_path}"\n'
-        return mcp_prompt.format(questions=ques)
-
 if __name__ == "__main__":
 
-    # models = ["qwen32", "qwen72"]
-    # models = ["deepseek3","qwen7"]
-    # models = ["qwen7","qwen32","qwen72"]
+    # ================= Configuration Area =================
     models = ["deepseek"]
-    # models = ["qwen7","qwen32","qwen72","gpt-4o-mini","deepseek"]
+    model_map = {"deepseek": "deepseek3"}
+    
+    # Filter Configuration
+    needs = ["a21"]  # Only run these indices
+    begin_index = 0
+    
+    # Path Configuration
+    input_path = "./agents_allq/crewai.json"
+    output_path = "./agents_allq/crewai.json"
+    
+    # Tool Initialization
+    tools = auto_wrap_tools(statool)
+    code_interpreter = CodeInterpreterTool(unsafe_mode=True)
 
     for model in models:
         print(f"Using model: {model}")
-        with open("keys.json", "r") as f:
-            config = json.load(f)
-            
-        if model not in config:
-            raise ValueError(f"Unknown provider: {model}")
         
-        model_map = {"deepseek":"deepseek3"}
+        cfg = get_model_cfg(model, model_map)
 
-        cfg = config[model_map[model]] if model in model_map else config[model]
-
-        # for qwen
         if model == "deepseek":
             llm = LLM(
-            model=f"dashscope/{cfg['model']}",
-            base_url=cfg["base_url"],
-            api_key=cfg["api_key"]
-        )
+                model=f"dashscope/{cfg['model']}",
+                base_url=cfg["base_url"],
+                api_key=cfg["api_key"]
+            )
         else:
             llm = LLM(
-                model=f"dashscope/{cfg['model']}" if "qwen" in cfg["model"].lower() else cfg["model"],
+                model=f"dashscope/{cfg['model']}" if "qwen" in cfg['model'].lower() else cfg['model'],
                 base_url=cfg["base_url"],
                 api_key=cfg["api_key"]
             )
 
-        # 自动包装 Crewai 工具
-        tools = auto_wrap_tools(allfuncscode)
-        code_interpreter = CodeInterpreterTool(unsafe_mode=True)
-
-        # 加载数据
-        data1 = pd.read_json("./agents_allq/crewai.json", encoding='utf-8')
-        data = data1.copy()
+        data = pd.read_json(input_path, encoding='utf-8')
         data_tmp = data.copy()
 
         col = f"crewai_{model}"
         if col not in data_tmp.columns:
             data_tmp[col] = None
 
+        # Logic preserved as original to check for resume index
         null_mask = data_tmp[col].isna()
         if null_mask.any():
-            begin_index = null_mask.idxmax()
-            print(f"[Info] Resume from index {begin_index}")
+            resume_index = null_mask.idxmax()
+            print(f"[Info] Resume from index {resume_index}")
         else:
             print("[Info] All rows already finished.")
-            begin_index = len(data_tmp)
-        begin_index = 0
-        needs = ["a21"]
+            # begin_index = len(data_tmp) # Preserved commented out line
+
+        # Loop processing
         for index, row in tqdm(data.iterrows(), total=len(data)):
-            # if index < begin_index or ("[Error] Row" not in str(data.loc[index,col])):
-            # if index < begin_index:
+            
+            # Filter logic
             if index < begin_index or row["index"] not in needs:
                 continue
-            print("-"*20+f"agent{model},row{index}"+"-"*20)
+            
+            print("-" * 20 + f"agent{model},row{index}" + "-" * 20)
+            
             try:
-                dataset = str(row["dataset"])
-                if not dataset.endswith(".csv"):
-                    dataset += ".csv"
-                dataset_path = f"./datasets83/{dataset}"
-
-                # 创建 Agent
+                # Create Agent
                 dataset_inference_agent = Agent(
                     role="Statistics Expert",
                     goal=(
@@ -156,7 +121,7 @@ if __name__ == "__main__":
                     agent=dataset_inference_agent,
                 )
 
-                # 创建并运行 Crew
+                # Create and run Crew
                 crew = Crew(
                     agents=[dataset_inference_agent],
                     tasks=[coding_task],
@@ -165,19 +130,19 @@ if __name__ == "__main__":
                 )
                 result = crew.kickoff()
 
-                # 安全获取结果
-                data_tmp.loc[index, f"crewai_{model}"] = getattr(result, "raw", None)
+                # Safely retrieve result
+                data_tmp.loc[index, col] = getattr(result, "raw", None)
 
             except Exception:
                 print(f"[Error] Row {index} failed:\n{traceback.format_exc()}")
                 message = f"[Error] Row {index} failed:\n{traceback.format_exc()}"
-                data_tmp.loc[index, f"crewai_{model}"] = message
+                data_tmp.loc[index, col] = message
 
-            # 每10条保存一次
+            # Save progress every 10 rows
             if (index + 1) % 10 == 0:
-                data_tmp.to_json("./agents_allq/crewai.json", force_ascii=False, orient='records', indent=2)
+                data_tmp.to_json(output_path, force_ascii=False, orient='records', indent=2)
                 print(f"[Info] Saved progress at index {index + 1}")
 
-        # 保存最终结果
-        data_tmp.to_json("./agents_allq/crewai.json", force_ascii=False, orient='records', indent=2)
+        # Save final result
+        data_tmp.to_json(output_path, force_ascii=False, orient='records', indent=2)
         print("[Info] Finished processing all rows and saved final result.")

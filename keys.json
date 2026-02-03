@@ -1,0 +1,12 @@
+{
+    "deepseek": {
+        "base_url": "https://api.ai-gaochao.cn/v1",
+        "api_key": "sk-IX9fwnS1sza0n1Jm338f750d200a465bAcB8BfA144E690B8",
+        "model": "deepseek-v3"
+    },
+    "gpt-4o-mini": {
+        "base_url": "https://",
+        "api_key": "your_api_key_here",
+        "model": "gpt-4o-mini"
+    }
+}

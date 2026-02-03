@@ -490,16 +490,16 @@ def contingency_test(data, columns=None, method='chi-square independence'):
 
     elif method == "mantel-haenszel":
         if df is None:
-            raise ValueError("Mantel-Haenszel 需要原始数据（DataFrame/CSV）。")
+            raise ValueError("Mantel-Haenszel needs original data (DataFrame/CSV).")
         if len(columns) != 3:
-            raise ValueError("Mantel-Haenszel 需要 [row, col, stratify] 三列。")
+            raise ValueError("Mantel-Haenszel requires [row, col, stratify] three columns.")
 
         row, col, strat = columns
         tables = []
         for _, g in df.groupby(strat):
             t = pd.crosstab(g[row], g[col])
             if t.shape != (2, 2):
-                raise ValueError("每个分层必须是 2x2 列联表。")
+                raise ValueError("Each stratum must be a 2x2 contingency table.")
             tables.append(t.to_numpy())
 
         result = StratifiedTable(tables)
@@ -670,21 +670,16 @@ def multivariable_linear_regression(data, y_col, x_cols, show_vif=True):
     X = X.apply(pd.to_numeric, errors="coerce")
     y = pd.to_numeric(y, errors="coerce")
 
-    # 添加常数项
     X = sm.add_constant(X)
 
-    # 拟合OLS模型
     model = sm.OLS(y, X).fit()
 
-    # 提取系数和显著性
     coefficients = model.params.to_dict()
     pvalues = model.pvalues.to_dict()
 
-    # 提取模型拟合优度
     r_squared = model.rsquared
     adj_r_squared = model.rsquared_adj
 
-    # 提取VIF
     vif_dict = None
     if show_vif:
         vif_dict = {}

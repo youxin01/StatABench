@@ -206,12 +206,8 @@ if __name__ == "__main__":
         max_tokens=None,
         timeout=None,
         api_key="",
-        base_url="",
-        extra_body={
-            "enable_thinking": False,
-            "return_reasoning": False
-        }
+        base_url=""
     )
-    input_file = ""
-    output_file = f""
+    input_file = "./autogen2.json" # statbench file path
+    output_file = "./autogen2.json"
     asyncio.run(main(input_file=input_file, output_file2=output_file, model=model, agent_name=agent_name))

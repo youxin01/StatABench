@@ -2,3 +2,4 @@ test.ipynb
 test/
 *.pyc
 __pycache__/
+mcp_scripts/autogen2.json

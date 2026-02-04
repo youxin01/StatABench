@@ -13,7 +13,10 @@ import json
 from tqdm import tqdm
 import re
 from qwen_agent import settings
-from utils import get_mcp_prompt, get_model_cfg
+
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import get_mcp_prompt,get_model_cfg
 
 # Global Settings
 settings.MAX_LLM_CALL_PER_RUN = 5
@@ -134,17 +137,23 @@ def create_qwen_tools_with_doc(module):
     return tools
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Run qwenagent processing.")
 
-    models = ["qwen7", "qwen32", "qwen72", "gpt-4o-mini", "deepseek"]
-    model_map = {"deepseek": "deepseek3"}
-    
-    # Filter Configuration
-    needs = ["a57", "a224", "a237"] 
-    begin_index = 0
-    
-    # Path Configuration
-    input_path = "./agents_allq/qwen_agent.json"
-    output_path = "./agents_allq/qwen_agent.json"
+    parser.add_argument("--models", nargs="+", default=["deepseek"],
+                        help="List of models to use, e.g., --models deepseek model2")
+    parser.add_argument("--begin_index", type=int, default=0,
+                        help="Starting index")
+    parser.add_argument("--input_path", type=str, default="./qwen_agent.json",
+                        help="Input JSON file path")
+    parser.add_argument("--output_path", type=str, default="./qwen_agent.json",
+                        help="Output JSON file path")
+    args = parser.parse_args()
+
+    models = args.models
+    input_path = args.input_path 
+    output_path = args.output_path
+    begin_index =args.begin_index
 
     # System Prompt
     system_instruction = "You are a professional statistics analyst, and could answer user's questions with or without using tools."
@@ -156,7 +165,7 @@ if __name__ == "__main__":
     for model in models:
         print(f"Using model: {model}")
         
-        cfg = get_model_cfg(model, model_map)
+        cfg = get_model_cfg(model)
         llm_cfg = {
             'model': cfg["model"],
             'model_server': cfg["base_url"],
@@ -174,9 +183,8 @@ if __name__ == "__main__":
 
         # Loop processing
         for index, row in tqdm(data.iterrows(), total=len(data)):
-            
-            # Filter Logic
-            if index < begin_index or row["index"] not in needs:
+            if index < begin_index:    
+            # if index < begin_index or row["index"] not in needs:
                 continue
             
             print("-" * 20 + f"agent{model},row{index}" + "-" * 20)

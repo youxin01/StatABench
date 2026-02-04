@@ -16,7 +16,10 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.tools.code_execution import PythonCodeExecutionTool
 from tqdm import tqdm
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import get_mcp_prompt,get_model_cfg
+import argparse
 
 def _clean_result(obj):
     if obj is None:
@@ -80,12 +83,23 @@ You are a precise and careful Statistics Analyst. And you can use the tools prov
 """
 
 if __name__ == "__main__":
-    models = ["qwen7","qwen32","qwen72","gpt-4o-mini","deepseek"]
-    model_map = {"deepseek":"deepseek3"}
-    retry_col = ["a57","a224","a237"]
-    input_path = "./autogen.json"
-    output_path = f"./autogen.json"
-    begin_index =0
+    parser = argparse.ArgumentParser(description="Run autogen processing.")
+
+    parser.add_argument("--models", nargs="+", default=["deepseek"],
+                        help="List of models to use, e.g., --models deepseek model2")
+    parser.add_argument("--begin_index", type=int, default=0,
+                        help="Starting index")
+    parser.add_argument("--input_path", type=str, default="./autogen2.json",
+                        help="Input JSON file path")
+    parser.add_argument("--output_path", type=str, default="./autogen2.json",
+                        help="Output JSON file path")
+    args = parser.parse_args()
+
+    models = args.models
+    input_path = args.input_path 
+    output_path = args.output_path
+    begin_index =args.begin_index
+
     tools = make_tools_from_module(statool)
     
     for model in models:
@@ -96,7 +110,7 @@ if __name__ == "__main__":
         if col not in data_tmp.columns:
             data_tmp[col] = None
 
-        cfg = get_model_cfg(model, model_map)
+        cfg = get_model_cfg(model)
         model_info = {
             "name": cfg["model"],
             "family": "qwen" if "qwen" in cfg["model"].lower() else "openai",
@@ -108,7 +122,6 @@ if __name__ == "__main__":
 
         for index, row in tqdm(data.iterrows(), total=len(data)):
             if index < begin_index:
-            # if index < begin_index or row["index"] not in retry_col:
                 continue
             print("-"*20+f"agent{model},row{index}"+"-"*20)
 

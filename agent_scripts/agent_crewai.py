@@ -9,8 +9,9 @@ from crewai.tools import tool
 import traceback
 import json
 from tqdm import tqdm
-from utils import get_mcp_prompt, get_model_cfg
-
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import get_mcp_prompt,get_model_cfg
 def auto_wrap_tools(module):
     wrapped_tools = []
     for name, func in inspect.getmembers(module, inspect.isfunction):
@@ -38,27 +39,31 @@ def wrapper({params_str}):
     return wrapped_tools
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Run crewai processing.")
 
-    # ================= Configuration Area =================
-    models = ["deepseek"]
-    model_map = {"deepseek": "deepseek3"}
-    
-    # Filter Configuration
-    needs = ["a21"]  # Only run these indices
-    begin_index = 0
-    
-    # Path Configuration
-    input_path = "./agents_allq/crewai.json"
-    output_path = "./agents_allq/crewai.json"
-    
-    # Tool Initialization
+    parser.add_argument("--models", nargs="+", default=["deepseek"],
+                        help="List of models to use, e.g., --models deepseek model2")
+    parser.add_argument("--begin_index", type=int, default=0,
+                        help="Starting index")
+    parser.add_argument("--input_path", type=str, default="./crewai.json",
+                        help="Input JSON file path")
+    parser.add_argument("--output_path", type=str, default="./crewai.json",
+                        help="Output JSON file path")
+    args = parser.parse_args()
+
+    models = args.models
+    input_path = args.input_path 
+    output_path = args.output_path
+    begin_index =args.begin_index
+
     tools = auto_wrap_tools(statool)
     code_interpreter = CodeInterpreterTool(unsafe_mode=True)
 
     for model in models:
         print(f"Using model: {model}")
         
-        cfg = get_model_cfg(model, model_map)
+        cfg = get_model_cfg(model)
 
         if model == "deepseek":
             llm = LLM(
@@ -80,20 +85,10 @@ if __name__ == "__main__":
         if col not in data_tmp.columns:
             data_tmp[col] = None
 
-        # Logic preserved as original to check for resume index
-        null_mask = data_tmp[col].isna()
-        if null_mask.any():
-            resume_index = null_mask.idxmax()
-            print(f"[Info] Resume from index {resume_index}")
-        else:
-            print("[Info] All rows already finished.")
-            # begin_index = len(data_tmp) # Preserved commented out line
-
         # Loop processing
         for index, row in tqdm(data.iterrows(), total=len(data)):
-            
-            # Filter logic
-            if index < begin_index or row["index"] not in needs:
+            if index < begin_index:
+            # if index < begin_index or row["index"] not in needs:
                 continue
             
             print("-" * 20 + f"agent{model},row{index}" + "-" * 20)

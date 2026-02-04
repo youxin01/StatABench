@@ -11,6 +11,10 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Tool
 import pandas as pd
 from tqdm import tqdm
 
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import get_mcp_prompt,get_model_cfg
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 math_server_path = os.path.join(current_dir, "mcp_server.py")
 
@@ -22,43 +26,6 @@ server_params = StdioServerParameters(
 system = """
 You are a professional statistics analyst, and you can answer the user's questions with or without using tools.
 """
-
-mcp_prompt = """
-Your task is to answer the following question. Please follow the instructions carefully:
-
-## Question
-
-{questions}
-
-## Instructions
-1. Analyze the question and determine whether you can answer it.
-2. There are many useful tools available, and you may use them to answer the user's questions (please use tools when necessary).
-3. If the question is a multiple-choice or true/false question, you should strictly follow the required answer format and do not provide explanations.
-4. For other questions, provide a concise and complete answer.
-5. Finally, the output **must always** follow this format **(do not omit <>):**
-    The answer is <your answer>.
-"""
-
-def get_mcp_prompt(row):
-    if row["code"] == 0:
-        eval_prompt = mcp_prompt.format(questions=row["question"])
-    else:
-        if row["dataset"] != 0:
-            if not str(row["dataset"]).endswith(".csv"):
-                dataset = str(row["dataset"]) + ".csv"
-            else:
-                dataset = str(row["dataset"])
-            dataset_path = f"./datasets83/{dataset}"
-            ques = (
-                row["question"]
-                + " The relevant dataset is located at: "
-                + f'"{dataset_path}"'
-                + "\n"
-            )
-        else:
-            ques = row["question"]
-        eval_prompt = mcp_prompt.format(questions=ques)
-    return eval_prompt
 
 async def main(input_file=None, output_file2=None, model=None, agent_name="qwen72"):
     datas = pd.read_json(input_file,encoding="utf-8")
@@ -199,15 +166,31 @@ if __name__ == "__main__":
     "llama3.1-8b": "llama3.1-8b",
     "llama3.1-70b": "llama3.1-70b"
     }
-    agent_name = "deepseek"
+    import argparse
+    parser = argparse.ArgumentParser(description="Run smolagent processing.")
+
+    parser.add_argument("--model",type=str, default="deepseek",
+                        help="model to use, e.g., --models deepseek")
+    parser.add_argument("--begin_index", type=int, default=0,
+                        help="Starting index")
+    parser.add_argument("--input_path", type=str, default="./statabench.json",
+                        help="Input JSON file path")
+    parser.add_argument("--output_path", type=str, default="./statabench.json",
+                        help="Output JSON file path")
+    args = parser.parse_args()
+    agent_name =args.model
+    cfg = get_model_cfg(agent_name)
+
     model = ChatOpenAI(
         model=agent_map[agent_name],
         temperature=0,
         max_tokens=None,
         timeout=None,
-        api_key="",
-        base_url=""
+        api_key=cfg["api_key"],
+        base_url=cfg["base_url"]
     )
-    input_file = "./autogen2.json" # statbench file path
-    output_file = "./autogen2.json"
+
+    input_file = args.input_path
+    output_file = args.output_path
+
     asyncio.run(main(input_file=input_file, output_file2=output_file, model=model, agent_name=agent_name))

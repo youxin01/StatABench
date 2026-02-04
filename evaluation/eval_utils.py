@@ -3,12 +3,14 @@ import pandas as pd
 from openai import OpenAI
 import json
 from tqdm import tqdm
-
+import os
 def gpt_chat(
     model: str,
     prompt: str = None
 ) -> str:
-    with open("keys.json", "r") as f:
+    keys_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    keys_path = os.path.join(keys_dir, "keys.json")
+    with open(keys_path, "r") as f:
         config = json.load(f)
         
     if model not in config:

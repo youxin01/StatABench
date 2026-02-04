@@ -1,0 +1,12 @@
+{
+    "deepseek": {
+        "base_url": "",
+        "api_key": "",
+        "model": "deepseek-v3"
+    },
+    "gpt-4o-mini": {
+        "base_url": "https://",
+        "api_key": "your_api_key_here",
+        "model": "gpt-4o-mini"
+    }
+}

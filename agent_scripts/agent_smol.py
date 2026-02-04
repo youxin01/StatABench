@@ -15,7 +15,9 @@ from smolagents import tool
 import os
 from smolagents import OpenAIServerModel, CodeAgent, LogLevel
 import json
-from utils import get_mcp_prompt, get_model_cfg
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import get_mcp_prompt,get_model_cfg
 
 def create_smolagent_tools_with_doc(TOOL_FILE):
     spec = importlib.util.spec_from_file_location("my_tools", TOOL_FILE)
@@ -111,21 +113,28 @@ def create_smolagent_tools_with_doc(TOOL_FILE):
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Run smolagent processing.")
 
-    models = ["qwen7", "qwen32", "qwen72", "gpt-4o-mini", "deepseek"]
-    model_map = {"deepseek": "deepseek3"}
-    
-    # Filter Configuration
-    needs = ["a57", "a224", "a237"] 
-    begin_index = 0
-    
-    # Path Configuration
-    input_path = "./agents_allq/smolagent.json"
-    output_path = "./agents_allq/smolagent.json"
+    parser.add_argument("--models", nargs="+", default=["deepseek"],
+                        help="List of models to use, e.g., --models deepseek model2")
+    parser.add_argument("--begin_index", type=int, default=0,
+                        help="Starting index")
+    parser.add_argument("--input_path", type=str, default="./smolagent.json",
+                        help="Input JSON file path")
+    parser.add_argument("--output_path", type=str, default="./smolagent.json",
+                        help="Output JSON file path")
+    args = parser.parse_args()
+
+    models = args.models
+    input_path = args.input_path 
+    output_path = args.output_path
+    begin_index =args.begin_index
+
     tool_file_path = "./statool.py"
 
     for model in models:
-        cfg = get_model_cfg(model, model_map)
+        cfg = get_model_cfg(model)
 
         llm = OpenAIServerModel(
             model_id=cfg["model"],
@@ -135,28 +144,17 @@ if __name__ == "__main__":
 
         tools = create_smolagent_tools_with_doc(tool_file_path)
 
-        # Load Data
-        data1 = pd.read_json(input_path, encoding='utf-8')
-        data = data1.copy()
+        data = pd.read_json(input_path, encoding='utf-8')
         data_tmp = data.copy()
 
         col = f"smolagent_{model}"
         if col not in data_tmp.columns:
             data_tmp[col] = None
-            
-        null_mask = data_tmp[col].isna()
-        if null_mask.any():
-            resume_index = null_mask.idxmax()
-            print(f"[Info] Resume from index {resume_index}")
-        else:
-            print("[Info] All rows already finished.")
-            # begin_index = len(data_tmp) # Preserved commented out line
         
         # Loop Processing
         for index, row in tqdm(data.iterrows(), total=len(data)):
-            
-            # Filter Logic
-            if index < begin_index or row["index"] not in needs:
+            if index < begin_index:
+            # if index < begin_index or row["index"] not in needs:
                 continue
             
             print("-" * 20 + f"model{model},row{index}" + "-" * 20)
@@ -168,10 +166,6 @@ if __name__ == "__main__":
                         max_steps=5,
                 )
                 query = get_mcp_prompt(row)
-                dataset = str(row["dataset"])
-                if not dataset.endswith(".csv"):
-                    dataset += ".csv"
-                dataset_path = f"./datasets83/{dataset}"
 
                 result = agent.run(query)
                 result = str(result)

@@ -1,8 +1,5 @@
 # StatABench
-
-> **The Official Code Repository for StatABench**
-
-This repository contains the implementation and benchmarking scripts for **StatABench**.
+This is official repository for **StatABench: Dataset and Framework for Evaluating Statistical Analysis Capabilities of LLMs**.
 
 ## 📂 Repository Structure
 

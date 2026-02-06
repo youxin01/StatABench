@@ -65,13 +65,10 @@ python ./mcp_scripts/mcp_pipeline.py \
 ```
 
 **Arguments:**
-
-| Parameter | Description |
-| --- | --- |
-| `--model` | The model key defined in `keys.json` (e.g., `deepseek`). |
-| `--begin_index` | The index to start processing from (useful for resuming interrupted runs). |
-| `--input_path` | Path to the source dataset file. |
-| `--output_path` | Path to save results. The script appends a new column (e.g., `mcp_response_{llm}`). |
+* `--model`  The model key defined in `keys.json` (e.g., `deepseek`).
+* `--begin_index`  The index to start processing from (useful for resuming interrupted runs).
+* `--input_path`  Path to the source dataset file.
+* `--output_path`  Path to save results. The script appends a new column (e.g., `mcp_response_{llm}`). 
 
 ### 2. Other Agent Frameworks
 

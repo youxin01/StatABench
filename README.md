@@ -1,10 +1,10 @@
 # StatABench: Dataset and Framework for Evaluating Statistical Analysis Capabilities of LLMs
 
-The official repository for **StatABench**. The benchmark is divided into two distinct tracks: **Stat-Closed** (Structured Benchmark) and **Stat-Open** (Open-ended Modeling).
+The official repository for **StatABench**. The benchmark is divided into two distinct tracks: **Stat-Closed** and **Stat-Open**.
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Env
 
 Ensure you have Python installed and the necessary dependencies.
 
@@ -15,7 +15,7 @@ pip install -r requirements.txt
 
 ### API Configuration
 
-Before running any agents, you must configure your LLM credentials. Create or update the `keys.json` file in the root directory.
+Before running any agents, you must configure your LLM credentials. Create or update the `keys.json` file.
 
 **Example `keys.json` structure:**
 
@@ -39,7 +39,7 @@ Before running any agents, you must configure your LLM credentials. Create or up
 
 ## Stat-Closed
 
-Stat-Closed evaluates LLMs on specific statistical queries using various data science agent frameworks.
+Stat-Closed evaluates LLMs on closed statistical problems using various data science agent frameworks.
 
 ### 1. MCP Agent Pipeline
 
@@ -66,7 +66,7 @@ python ./mcp_scripts/mcp_pipeline.py \
 
 **Arguments:**
 * `--model`  The model key defined in `keys.json` (e.g., `deepseek`).
-* `--begin_index`  The index to start processing from (useful for resuming interrupted runs).
+* `--begin_index`  The index to start.
 * `--input_path`  Path to the source dataset file.
 * `--output_path`  Path to save results. The script appends a new column (e.g., `mcp_response_{llm}`). 
 
@@ -107,7 +107,7 @@ python ./evaluation/eval.py \
 
 ## Stat-Open
 
-**Stat-Open** focuses on real-world, open-ended statistical modeling problems. The core data is located in `data/stat-open.json`, also the dataset that the every problem needs can be found at [![Dataset](https://img.shields.io/badge/HuggingFace-Dataset-yellow?logo=huggingface&logoColor=white)](https://huggingface.co/datasets/ADUIDUIDUIi/Stat-Open-Datasets)
+**Stat-Open** focuses on real-world, open-ended statistical modeling problems. The core data is located in `data/stat-open.json`, and the dataset that the every problem needs can be found at [![Dataset](https://img.shields.io/badge/HuggingFace-Dataset-yellow?logo=huggingface&logoColor=white)](https://huggingface.co/datasets/ADUIDUIDUIi/Stat-Open-Datasets)
 
 
 ### Dataset Structure
@@ -120,7 +120,7 @@ Parts of explanation for the fields in `stat-open.json`:
 * **`dataset_description`**: Explanation of the dataset structure and source.
 * **`variable_description`**: Detailed description of variables within the dataset.
 * **`addendum`**: Appendix information or extra context.
-* **`role`**: role description used by the Judger.
+* **`role`**: Role descriptions used by the Judger.
 
 ### Modeling Agent
 
@@ -129,11 +129,11 @@ We test two advanced agent frameworks for this track:
 1. **[MathModelAgent](https://github.com/jihe520/MathModelAgent)**
 2. **[LLM-MM-Agent](https://github.com/usail-hkust/LLM-MM-Agent)**
 
-Please follow their official repositories for instructions on how to set up and run tasks on the Stat-Open dataset.
+Please follow their official repositories for instructions on how to set up and run tasks in the Stat-Open dataset.
 
 ### LLM-as-a-Judge Evaluation
 
-After generating the analysis reports (in Markdown format), use our automated judger to evaluate the quality.
+After generating the reports (in Markdown format), use our automated judger to evaluate the quality.
 
 ```bash
 python judger-open/main_judge_stat.py \
@@ -144,6 +144,6 @@ python judger-open/main_judge_stat.py \
 
 **Arguments:**
 
-* `--model`: The judge model to use (e.g., `gpt-4o-mini`).
+* `--model`: The base model to use (e.g., `gpt-4o-mini`).
 * `--problem`: The specific problem ID (e.g., `cumcm2012c`) matching the entry in the dataset.
 * `--paper_path`: Path to the generated solution report (`.md` file).

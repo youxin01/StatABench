@@ -39,7 +39,7 @@ Before running any agents, you must configure your LLM credentials. Create or up
 
 ## Stat-Closed
 
-Stat-Closed evaluates LLMs on specific statistical queries using various agent frameworks.
+Stat-Closed evaluates LLMs on specific statistical queries using various data science agent frameworks.
 
 ### 1. MCP Agent Pipeline
 
@@ -73,6 +73,7 @@ python ./mcp_scripts/mcp_pipeline.py \
 ### 2. Other Agent Frameworks
 
 You can also evaluate LLMs using other popular agent frameworks located in the `agent_scripts` folder.
+
 **Supported Frameworks:** AutoGen, CrewAI, Qwen-Agent, and SmolAgents.
 
 **Example: Running AutoGen with DeepSeek**
@@ -83,20 +84,18 @@ python ./agent_scripts/agent_autogen.py \
   --begin_index 0 \
   --input_path ./data/stat-open.json \
   --output_path ./data/result/autogen_deepseek.json
-
 ```
 
 * **Note:** The output file will contain a new column (e.g., `autogen_deepseek`) with the model's responses.
 
 ### Evaluation (Stat-Closed)
 
-Once the generation process is complete, evaluate the model's responses against the ground truth.
+Once the generation process is complete, evaluate the model's responses.
 
 ```bash
 python ./evaluation/eval.py \
   --input_path ./data/result/autogen_deepseek.json \
   --response_col autogen_deepseek
-
 ```
 
 **Arguments:**
@@ -108,12 +107,12 @@ python ./evaluation/eval.py \
 
 ## Stat-Open
 
-**Stat-Open** focuses on real-world, open-ended statistical modeling problems. The core benchmark data is located in `data/stat-open.json`, also the dataset that the every problem needs can be found at [![Dataset](https://img.shields.io/badge/HuggingFace-Dataset-yellow?logo=huggingface&logoColor=white)](https://huggingface.co/datasets/ADUIDUIDUIi/Stat-Open-Datasets)
+**Stat-Open** focuses on real-world, open-ended statistical modeling problems. The core data is located in `data/stat-open.json`, also the dataset that the every problem needs can be found at [![Dataset](https://img.shields.io/badge/HuggingFace-Dataset-yellow?logo=huggingface&logoColor=white)](https://huggingface.co/datasets/ADUIDUIDUIi/Stat-Open-Datasets)
 
 
 ### Dataset Structure
 
-Each entry in `stat-open.json` contains the following fields:
+Parts of explanation for the fields in `stat-open.json`:
 
 * **`background`**: Background introduction of the problem.
 * **`problem_requirement`**: Specific requirements and questions to answer.
@@ -123,9 +122,9 @@ Each entry in `stat-open.json` contains the following fields:
 * **`addendum`**: Appendix information or extra context.
 * **`role`**: role description used by the Judger.
 
-### Modeding Agent
+### Modeling Agent
 
-We  test two advanced agent frameworks for this track:
+We test two advanced agent frameworks for this track:
 
 1. **[MathModelAgent](https://github.com/jihe520/MathModelAgent)**
 2. **[LLM-MM-Agent](https://github.com/usail-hkust/LLM-MM-Agent)**
@@ -141,7 +140,6 @@ python judger-open/main_judge_stat.py \
   --model gpt-4o-mini \
   --problem cumcm2012c \
   --paper_path ./path_to_your_md_file.md
-
 ```
 
 **Arguments:**

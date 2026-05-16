@@ -8,5 +8,10 @@
         "base_url": "https://",
         "api_key": "your_api_key_here",
         "model": "gpt-4o-mini"
+    },
+    "gpt5": {
+        "base_url": "https://api.ai-gaochao.cn/v1",
+        "api_key": "sk-G3SVJ2II6u1kSBw5D18aEeEa44Da4d54B2BdFa6e506281F9",
+        "model": "gpt-5"
     }
 }

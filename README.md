@@ -65,10 +65,11 @@ python ./mcp_scripts/mcp_pipeline.py \
 ```
 
 **Arguments:**
-* `--model`  The model key defined in `keys.json` (e.g., `deepseek`).
-* `--begin_index`  The index to start.
-* `--input_path`  Path to the source dataset file.
-* `--output_path`  Path to save results. The script appends a new column (e.g., `mcp_response_{llm}`). 
+
+- `--model`  The model key defined in `keys.json` (e.g., `deepseek`).
+- `--begin_index`  The index to start.
+- `--input_path`  Path to the source dataset file.
+- `--output_path`  Path to save results. The script appends a new column (e.g., `mcp_response_{llm}`).
 
 ### 2. Other Agent Frameworks
 
@@ -86,7 +87,7 @@ python ./agent_scripts/agent_autogen.py \
   --output_path ./data/result/autogen_deepseek.json
 ```
 
-* **Note:** The output file will contain a new column (e.g., `autogen_deepseek`) with the model's responses.
+- **Note:** The output file will contain a new column (e.g., `autogen_deepseek`) with the model's responses.
 
 ### Evaluation (Stat-Closed)
 
@@ -100,27 +101,26 @@ python ./evaluation/eval.py \
 
 **Arguments:**
 
-* `--input_path`: The JSON file containing the model's generated responses.
-* `--response_col`: The specific column name where the model's answers are stored (e.g., `autogen_deepseek`, `crewai_gpt4`).
+- `--input_path`: The JSON file containing the model's generated responses.
+- `--response_col`: The specific column name where the model's answers are stored (e.g., `autogen_deepseek`, `crewai_gpt4`).
 
 ---
 
 ## Stat-Open
 
-**Stat-Open** focuses on real-world, open-ended statistical modeling problems. The core data is located in `data/stat-open.json`, and the dataset that the every problem needs can be found at [![Dataset](https://img.shields.io/badge/HuggingFace-Dataset-yellow?logo=huggingface&logoColor=white)](https://huggingface.co/datasets/ADUIDUIDUIi/Stat-Open-Datasets)
-
+**Stat-Open** focuses on real-world, open-ended statistical modeling problems. The core data is located in `data/stat-open.json`, and the dataset that the every problem needs can be found at [Dataset](https://huggingface.co/datasets/ADUIDUIDUIi/Stat-Open-Datasets)
 
 ### Dataset Structure
 
 Parts of explanation for the fields in `stat-open.json`:
 
-* **`background`**: Background introduction of the problem.
-* **`problem_requirement`**: Specific requirements and questions to answer.
-* **`dataset_path`**: Dataset name of the associated dataset files.
-* **`dataset_description`**: Explanation of the dataset structure and source.
-* **`variable_description`**: Detailed description of variables within the dataset.
-* **`addendum`**: Appendix information or extra context.
-* **`role`**: Role descriptions used by the Judger.
+- `**background`**: Background introduction of the problem.
+- `**problem_requirement**`: Specific requirements and questions to answer.
+- `**dataset_path**`: Dataset name of the associated dataset files.
+- `**dataset_description**`: Explanation of the dataset structure and source.
+- `**variable_description**`: Detailed description of variables within the dataset.
+- `**addendum**`: Appendix information or extra context.
+- `**role**`: Role descriptions used by the Judger.
 
 ### Modeling Agent
 
@@ -133,7 +133,7 @@ Please follow their official repositories for instructions on how to set up and 
 
 ### LLM-as-a-Judge Evaluation
 
-After generating the reports (in Markdown format), use our automated judger to evaluate the quality.
+After generating the reports, use our automated judger to evaluate the quality. It supports both text reports (`.md`, `.txt`) and PDF reports (`.pdf`).
 
 ```bash
 python judger-open/main_judge_stat.py \
@@ -142,8 +142,20 @@ python judger-open/main_judge_stat.py \
   --paper_path ./path_to_your_md_file.md
 ```
 
+For PDF input:
+
+```bash
+python judger-open/main_judge_stat.py \
+  --model gpt-4o-mini \
+  --problem MAS2022a \
+  --paper_path ./path_to_your_pdf_file.pdf \
+  --paper_type pdf
+```
+
 **Arguments:**
 
-* `--model`: The base model to use (e.g., `gpt-4o-mini`).
-* `--problem`: The specific problem ID (e.g., `cumcm2012c`) matching the entry in the dataset.
-* `--paper_path`: Path to the generated solution report (`.md` file).
+- `--model`: The base model to use (e.g., `gpt-4o-mini`).
+- `--problem`: The problem ID in `data/stat-open.json` (case-insensitive).
+- `--paper_path`: Path to the report file.
+- `--paper_type`: Optional. Use `pdf` for PDF input, or leave it as `auto`.
+

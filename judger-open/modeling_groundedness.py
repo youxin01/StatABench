@@ -5,6 +5,7 @@ from openai import OpenAI
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import get_model_cfg
+from judger_utils import get_paper_reference_text, request_judger_completion
 
 class ModelingGroundednessJudger:
      SYS_PROMPT = """You are currently evaluating statistical modeling papers. Your task is to assess how well the solution's modeling approach is grounded in statistical theory and scientific principles. You should evaluate based on the role you are given.
@@ -107,8 +108,9 @@ Your Response:
 
 Note: Scores must be exactly 0.00, 0.25, 0.50, 0.75, or 1.00. Start at 0 and justify each increment. Be extremely critical. You should also give your score and explanation from your role's perspective."""
 
-     USER_PROMPT = """Please evaluate the modeling groundedness of the following statistical modeling paper:
+     USER_PROMPT = """Please evaluate the modeling groundedness of the submitted statistical modeling paper.
 
+Paper content or attachment reference:
 {writing}
 
 Provide scores and detailed justification for each aspect. Remember your role as {role_name}. Your judgement should be based on this role's perspective.
@@ -120,22 +122,20 @@ Your Response:
             self.configs = get_model_cfg(model)
             self.client = OpenAI(api_key=self.configs["api_key"],base_url=self.configs["base_url"])
 
-     def run(self, writing: str, role: dict = None) -> dict:
+     def run(self, paper_input: dict, role: dict = None) -> dict:
             role_name = role["name"].strip()
             role_details = role["details"].strip()
-            messages = [
-                {'role': 'system', 'content': role_details + "\n\n" + self.SYS_PROMPT},
-                {'role': 'user', 'content': self.USER_PROMPT.format(writing=writing, role_name=role_name)}
-            ]
-
-            response = self.client.chat.completions.create(
-                model=self.configs["model"],
-                messages=messages,
-                temperature=0.0,
-                n=1,
+            user_prompt = self.USER_PROMPT.format(
+                writing=get_paper_reference_text(paper_input),
+                role_name=role_name,
             )
-            
-            content = response.choices[0].message.content
+            content = request_judger_completion(
+                client=self.client,
+                model=self.configs["model"],
+                system_prompt=role_details + "\n\n" + self.SYS_PROMPT,
+                user_prompt=user_prompt,
+                paper_input=paper_input,
+            )
             json_str = content.split("```json")[1].split("```")[0].strip()
             result = ast.literal_eval(json_str)
             

@@ -5,6 +5,7 @@ from openai import OpenAI
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import get_model_cfg
+from judger_utils import get_paper_reference_text, request_judger_completion
 
 class StructuralCoherencyJudger:
     SYS_PROMPT = """You are an expert judge evaluating statistical modeling papers. Your task is to assess the structural coherency of the paper by checking if it contains all necessary components.
@@ -99,8 +100,9 @@ Your Response:
 
 Note: For each component, score must be exactly 0.0, 0.25, 0.50, 0.75, or 1.00. Be extremely critical - most solutions should score in the 0.25-0.50 range unless truly exceptional."""
 
-    USER_PROMPT = """Please evaluate the structural coherency of the following statistical modeling paper:
+    USER_PROMPT = """Please evaluate the structural coherency of the submitted statistical modeling paper.
 
+Paper content or attachment reference:
 {writing}
 
 Provide scores and explanations for each component.
@@ -112,20 +114,15 @@ Your Response:
           self.configs = get_model_cfg(model)
           self.client = OpenAI(api_key=self.configs["api_key"],base_url=self.configs["base_url"])
 
-    def run(self, writing: str) -> dict:
-          messages = [
-               {'role': 'system', 'content': self.SYS_PROMPT},
-               {'role': 'user', 'content': self.USER_PROMPT.format(writing=writing)}
-          ]
-
-          response = self.client.chat.completions.create(
+    def run(self, paper_input: dict) -> dict:
+          user_prompt = self.USER_PROMPT.format(writing=get_paper_reference_text(paper_input))
+          content = request_judger_completion(
+               client=self.client,
                model=self.configs["model"],
-               messages=messages,
-               temperature=0.0,
-               n=1,
+               system_prompt=self.SYS_PROMPT,
+               user_prompt=user_prompt,
+               paper_input=paper_input,
           )
-          
-          content = response.choices[0].message.content
           json_str = content.split("```json")[1].split("```")[0].strip()
           result = ast.literal_eval(json_str)
           total_score = sum(result["scores"].values())

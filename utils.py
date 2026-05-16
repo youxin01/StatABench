@@ -37,10 +37,11 @@ def get_mcp_prompt(row):
         return mcp_prompt.format(questions=ques)
     
 def get_model_cfg(model):
-    key_path = os.path.join("./keys.json")
-    with open(key_path,"r") as f:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    key_path = os.path.join(current_dir, "keys.json")
+    with open(key_path, "r", encoding="utf-8") as f:
         config = json.load(f)
-    cfg = config[model]
+    cfg = config.get(model)
     if cfg is None:
         raise ValueError(f"Unknown provider: {model}")
     return cfg

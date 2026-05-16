@@ -6,6 +6,7 @@ import re
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import get_model_cfg
+from judger_utils import get_paper_reference_text, request_judger_completion
 
 
 def parse_and_save_evaluation_data(text):
@@ -66,8 +67,9 @@ Please objectively and detailedly evaluate the rigor and rationality of the mode
 ### 2.1 Assumptions\n\n**Evaluation:
 """
 
-    USER_PROMPT = """Please evaluate the practicality and scientificity of the following statistical modeling paper:
+    USER_PROMPT = """Please evaluate the practicality and scientificity of the submitted statistical modeling paper.
 
+Paper content or attachment reference:
 {writing}
 
 Provide scores and explanations for each component.
@@ -79,20 +81,15 @@ Your Response:
         self.configs = get_model_cfg(model)
         self.client = OpenAI(api_key=self.configs["api_key"],base_url=self.configs["base_url"])
 
-    def run(self, writing: str) -> dict:
-        messages = [
-            {'role': 'system', 'content': self.SYS_PROMPT},
-            {'role': 'user', 'content': self.USER_PROMPT.format(writing=writing)}
-        ]
-
-        response = self.client.chat.completions.create(
+    def run(self, paper_input: dict) -> dict:
+        user_prompt = self.USER_PROMPT.format(writing=get_paper_reference_text(paper_input))
+        content = request_judger_completion(
+            client=self.client,
             model=self.configs["model"],
-            messages=messages,
-            temperature=0.0,
-            n=1,
+            system_prompt=self.SYS_PROMPT,
+            user_prompt=user_prompt,
+            paper_input=paper_input,
         )
-        
-        content = response.choices[0].message.content
         result_dict = parse_and_save_evaluation_data(content)
         score_values = [item['score'] for item in result_dict.values()]
         total_score = sum(score_values)
